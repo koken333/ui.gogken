@@ -1,58 +1,46 @@
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-getgenv().ESP_XRay = true
+-- ฟังก์ชันปรับขนาดตัวละคร
+local function setCharacterSize(scaleValue)
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	local humanoid = character:WaitForChild("Humanoid")
+	for _, scaleName in ipairs({"BodyHeightScale", "BodyDepthScale", "BodyWidthScale", "HeadScale"}) do
+		local scale = humanoid:FindFirstChild(scaleName)
+		if scale then
+			scale.Value = scaleValue
+		end
+	end
+end
 
--- UI เปิด/ปิด ESP
-local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-gui.Name = "XRayESP_UI"
+-- UI สร้างหน้าต่าง
+local screenGui = Instance.new("ScreenGui", PlayerGui)
+screenGui.Name = "Resize_UI"
+screenGui.ResetOnSpawn = false
 
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 130, 0, 40)
-toggleButton.Position = UDim2.new(0, 20, 0, 20)
-toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.Text = "👁️ เปิด X-Ray ESP"
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextScaled = true
-toggleButton.Parent = gui
+-- ปุ่มย่อขนาด
+local shrinkBtn = Instance.new("TextButton")
+shrinkBtn.Size = UDim2.new(0, 150, 0, 40)
+shrinkBtn.Position = UDim2.new(0, 20, 0, 60)
+shrinkBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+shrinkBtn.TextColor3 = Color3.new(1, 1, 1)
+shrinkBtn.Font = Enum.Font.GothamBold
+shrinkBtn.TextSize = 18
+shrinkBtn.Text = "ย่อขนาด (50%)"
+shrinkBtn.Parent = screenGui
 
-toggleButton.MouseButton1Click:Connect(function()
-	getgenv().ESP_XRay = not getgenv().ESP_XRay
-	toggleButton.Text = getgenv().ESP_XRay and "❌ ปิด X-Ray ESP" or "👁️ เปิด X-Ray ESP"
+-- ปุ่มคืนขนาดปกติ
+local resetBtn = shrinkBtn:Clone()
+resetBtn.Position = UDim2.new(0, 20, 0, 110)
+resetBtn.Text = "คืนขนาด (100%)"
+resetBtn.Parent = screenGui
+
+-- ฟังก์ชันปุ่ม
+shrinkBtn.MouseButton1Click:Connect(function()
+	setCharacterSize(0.5)
 end)
 
--- ฟังก์ชันใส่ Highlight ESP
-local function addHighlight(player)
-	if player == LocalPlayer then return end
-	local function onChar(char)
-		local hl = char:FindFirstChild("XRayHighlight")
-		if hl then hl:Destroy() end
-
-		local highlight = Instance.new("Highlight")
-		highlight.Name = "XRayHighlight"
-		highlight.FillColor = Color3.fromRGB(0, 255, 0)
-		highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-		highlight.FillTransparency = 0.25 -- ยังเห็นทะลุ
-		highlight.OutlineTransparency = 0
-		highlight.Adornee = char
-		highlight.Parent = char
-
-		RunService.RenderStepped:Connect(function()
-			if not highlight or not char or not char.Parent then return end
-			highlight.Enabled = getgenv().ESP_XRay
-		end)
-	end
-
-	if player.Character then
-		onChar(player.Character)
-	end
-	player.CharacterAdded:Connect(onChar)
-end
-
--- ใส่ให้ทุกคน
-for _, plr in ipairs(Players:GetPlayers()) do
-	addHighlight(plr)
-end
-Players.PlayerAdded:Connect(addHighlight)
+resetBtn.MouseButton1Click:Connect(function()
+	setCharacterSize(1)
+end)
