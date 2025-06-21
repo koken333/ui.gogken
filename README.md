@@ -3,3 +3,7 @@ local Window = Library.CreateLib("Gohken",    "Ocean")
 
 local Tab = Window:NewTab("EIEI")
 local Section = Tab:NewSection("Section Name")
+Section:NewButton("ButtonText", "ButtonInfo", function()
+    print("Clicked")
+end)
+
