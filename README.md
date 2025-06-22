@@ -1,55 +1,76 @@
-local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "ShadowUI"
-gui.ResetOnSpawn = false
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Camera = workspace.CurrentCamera
 
--- Main Frame
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 400, 0, 300)
-frame.Position = UDim2.new(0.5, -200, 0.5, -150)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-frame.BorderSizePixel = 0
-frame.BackgroundTransparency = 0.1
-frame.ClipsDescendants = true
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
+-- UI หลัก
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "SpectateUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
 
--- UI Stroke (ขอบเท่ ๆ)
-local stroke = Instance.new("UIStroke", frame)
-stroke.Color = Color3.fromRGB(0, 200, 255)
-stroke.Thickness = 2
-stroke.Transparency = 0.2
+-- ปุ่มเปิด UI
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 140, 0, 40)
+toggleButton.Position = UDim2.new(0, 20, 0, 20)
+toggleButton.BackgroundColor3 = Color3.fromRGB(30, 180, 255)
+toggleButton.Text = "ดูผู้เล่น"
+toggleButton.TextScaled = true
+toggleButton.Parent = screenGui
 
--- UI Corner (มุมโค้ง)
-local corner = Instance.new("UICorner", frame)
-corner.CornerRadius = UDim.new(0, 12)
+-- เฟรมรายชื่อ
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 300)
+frame.Position = UDim2.new(0, 20, 0, 70)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.Visible = false
+frame.Parent = screenGui
 
--- Title Text
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.BackgroundTransparency = 1
-title.Text = "⚡ SHADOW UI"
-title.TextColor3 = Color3.fromRGB(0, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 24
+local uiList = Instance.new("UIListLayout", frame)
+uiList.Padding = UDim.new(0, 4)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Button เท่ ๆ
-local button = Instance.new("TextButton", frame)
-button.Size = UDim2.new(0.8, 0, 0, 40)
-button.Position = UDim2.new(0.1, 0, 0.3, 0)
-button.BackgroundColor3 = Color3.fromRGB(0, 100, 150)
-button.Text = "เปิดโหมดล่องหน"
-button.TextColor3 = Color3.new(1,1,1)
-button.Font = Enum.Font.GothamSemibold
-button.TextSize = 20
+-- ฟังก์ชันดูจอผู้เล่น
+local function spectatePlayer(target)
+	if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+		Camera.CameraSubject = target.Character.Humanoid
+	end
+end
 
-local btnCorner = Instance.new("UICorner", button)
-btnCorner.CornerRadius = UDim.new(0, 8)
+-- สร้างปุ่มสำหรับแต่ละผู้เล่น
+local function updateList()
+	frame:ClearAllChildren()
+	uiList.Parent = frame
 
-local btnStroke = Instance.new("UIStroke", button)
-btnStroke.Color = Color3.fromRGB(0, 255, 255)
-btnStroke.Thickness = 1.5
-btnStroke.Transparency = 0.1
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer then
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(1, -8, 0, 40)
+			btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+			btn.Text = p.Name
+			btn.TextColor3 = Color3.new(1, 1, 1)
+			btn.TextScaled = true
+			btn.Parent = frame
 
-button.MouseButton1Click:Connect(function()
-    print("เปิดล่องหน")
+			btn.MouseButton1Click:Connect(function()
+				spectatePlayer(p)
+			end)
+		end
+	end
+end
+
+-- กดปุ่มแสดง/ซ่อน UI
+toggleButton.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+	if frame.Visible then
+		updateList()
+	end
+end)
+
+-- อัปเดตเมื่อมีผู้เล่นใหม่
+Players.PlayerAdded:Connect(function()
+	if frame.Visible then updateList() end
+end)
+Players.PlayerRemoving:Connect(function()
+	if frame.Visible then updateList() end
 end)
