@@ -106,26 +106,70 @@ end
 Players.PlayerAdded:Connect(createESP)
 
 -- ====== TOGGLE UI VISIBILITY (พับ/แสดงเมนู) ======
-local mainToggleGui = Instance.new("ScreenGui", PlayerGui)
-mainToggleGui.Name = "MainToggle_UI"
-mainToggleGui.ResetOnSpawn = false
-mainToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local isMinimized = false
-local toggleMainButton = Instance.new("TextButton")
-toggleMainButton.Size = UDim2.new(0, 150, 0, 40)
-toggleMainButton.Position = UDim2.new(0, 180, 0, 20)
-toggleMainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-toggleMainButton.TextColor3 = Color3.new(1, 1, 1)
-toggleMainButton.Font = Enum.Font.GothamBold
-toggleMainButton.TextScaled = true
-toggleMainButton.Text = "🔽 พับเมนู"
-toggleMainButton.Parent = mainToggleGui
-toggleMainButton.Active = true
-toggleMainButton.Draggable = true
+-- สร้าง ScreenGui
+local screenGui = Instance.new("ScreenGui", PlayerGui)
+screenGui.Name = "LogoUI"
+screenGui.ResetOnSpawn = false
 
-toggleMainButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    toggleMainButton.Text = isMinimized and "🔼 แสดงเมนู" or "🔽 พับเมนู"
-    espGui.Enabled = not isMinimized
+-- สร้างเฟรมโลโก้/ไมค์
+local logoFrame = Instance.new("Frame", screenGui)
+logoFrame.Size = UDim2.new(0, 80, 0, 80)
+logoFrame.Position = UDim2.new(0.5, -40, 0.5, -40)
+logoFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+logoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+logoFrame.BackgroundTransparency = 0.3
+logoFrame.BorderSizePixel = 0
+logoFrame.Name = "RoundedBG"
+
+local uicorner = Instance.new("UICorner", logoFrame)
+uicorner.CornerRadius = UDim.new(0, 40)
+
+-- ใส่รูปภาพในเฟรม
+local imageLabel = Instance.new("ImageLabel", logoFrame)
+imageLabel.Size = UDim2.new(1, 0, 1, 0)
+imageLabel.BackgroundTransparency = 1
+imageLabel.Image = "rbxassetid://14737398259"
+
+-- ========= ฟังก์ชันลาก UI =========
+local dragging = false
+local dragStart, startPos
+
+-- เมื่อเริ่มกด/แตะที่เฟรม
+logoFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = logoFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+-- บันทึก event การเคลื่อนเมาส์
+logoFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+-- ติดตามและอัปเดตตำแหน่งเมื่อมีการลาก
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        logoFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
 end)
