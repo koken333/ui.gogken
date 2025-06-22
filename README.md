@@ -10,7 +10,7 @@ screenGui.Parent = PlayerGui
 
 -- พื้นหลังดำ + มุมโค้ง
 local logoFrame = Instance.new("Frame")
-logoFrame.Size = UDim2.new(0, 400, 0, 200)
+logoFrame.Size = UDim2.new(0, 20, 0, 20)
 logoFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
 logoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 logoFrame.BorderSizePixel = 0
