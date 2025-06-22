@@ -28,5 +28,5 @@ uicorner.CornerRadius = UDim.new(0, 40)
 local imageLabel = Instance.new("ImageLabel")
 imageLabel.Size = UDim2.new(1, 0, 1, 0)
 imageLabel.BackgroundTransparency = 1
-imageLabel.Image = "rbxassetid://YOUR_ASSET_ID_HERE" -- แทนที่ด้วย Asset ID ของภาพคุณ
+imageLabel.Image = "rbxassetid://14737398259" -- แทนที่ด้วย Asset ID ของภาพคุณ
 imageLabel.Parent = logoFrame
