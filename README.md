@@ -1,152 +1,121 @@
-local Players = game:GetService("Players")
+ocal Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- สร้าง ScreenGui สำหรับ UI
-local screenGui = Instance.new("ScreenGui", PlayerGui)
-screenGui.Name = "ESP_Spectate_UI"
-screenGui.ResetOnSpawn = false
+-- ฟังก์ชันสร้าง UI สวยๆ
+local function createButton(parent, name, text, posY)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0, 150, 0, 40)
+    btn.Position = UDim2.new(0, 20, 0, posY)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    btn.BorderSizePixel = 0
+    btn.TextColor3 = Color3.fromRGB(1,1,1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextScaled = true
+    btn.Text = text
+    btn.Parent = parent
+    return btn
+end
 
--- สร้างปุ่ม Toggle สำหรับเปิด/ปิด UI
-local toggleButton = Instance.new("TextButton", screenGui)
-toggleButton.Size = UDim2.new(0, 150, 0, 50)
-toggleButton.Position = UDim2.new(0, 20, 0, 20)
-toggleButton.Text = "เปิด UI"
-toggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextScaled = true
+-- ====== ESP ======
+getgenv().ESPEnabled = false
+local ESPColor = Color3.fromRGB(0, 255, 0)
 
--- สร้าง Frame สำหรับ ESP และ Spectate
-local menuFrame = Instance.new("Frame", screenGui)
-menuFrame.Size = UDim2.new(0, 200, 0, 300)
-menuFrame.Position = UDim2.new(0, 20, 0, 80)
-menuFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-menuFrame.Visible = false
+local espGui = Instance.new("ScreenGui", PlayerGui)
+espGui.Name = "ESP_UI"
+espGui.ResetOnSpawn = false
+espGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- ปุ่มสำหรับเปิด/ปิด ESP
-local espButton = Instance.new("TextButton", menuFrame)
-espButton.Size = UDim2.new(0, 150, 0, 50)
-espButton.Position = UDim2.new(0, 20, 0, 20)
-espButton.Text = "เปิด ESP"
-espButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-espButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-espButton.Font = Enum.Font.GothamBold
-espButton.TextScaled = true
-
--- ปุ่มสำหรับเปิด/ปิด Spectate
-local spectateButton = Instance.new("TextButton", menuFrame)
-spectateButton.Size = UDim2.new(0, 150, 0, 50)
-spectateButton.Position = UDim2.new(0, 20, 0, 80)
-spectateButton.Text = "เปิด Spectate"
-spectateButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-spectateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-spectateButton.Font = Enum.Font.GothamBold
-spectateButton.TextScaled = true
-
--- ปุ่มสำหรับปิด UI
-local closeButton = Instance.new("TextButton", menuFrame)
-closeButton.Size = UDim2.new(0, 150, 0, 50)
-closeButton.Position = UDim2.new(0, 20, 0, 140)
-closeButton.Text = "ปิด UI"
-closeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextScaled = true
-
--- ตัวแปรสำหรับ ESP และ Spectate
-local espEnabled = false
-local spectateEnabled = false
-local currentSpectatingPlayer = nil
-
--- ฟังก์ชันสำหรับ Toggle UI
-toggleButton.MouseButton1Click:Connect(function()
-    menuFrame.Visible = not menuFrame.Visible
-    toggleButton.Text = menuFrame.Visible and "ปิด UI" or "เปิด UI"
+local toggleESPButton = createButton(espGui, "ToggleESPButton", "🔍 เปิด ESP", 20)
+toggleESPButton.MouseButton1Click:Connect(function()
+    getgenv().ESPEnabled = not getgenv().ESPEnabled
+    toggleESPButton.Text = getgenv().ESPEnabled and "❌ ปิด ESP" or "🔍 เปิด ESP"
 end)
 
--- ฟังก์ชันสำหรับ Toggle ESP
-espButton.MouseButton1Click:Connect(function()
-    espEnabled = not espEnabled
-    espButton.Text = espEnabled and "ปิด ESP" or "เปิด ESP"
-end)
-
--- ฟังก์ชันสำหรับ Toggle Spectate
-spectateButton.MouseButton1Click:Connect(function()
-    spectateEnabled = not spectateEnabled
-    spectateButton.Text = spectateEnabled and "ปิด Spectate" or "เปิด Spectate"
-    if spectateEnabled then
-        -- เลือกผู้เล่นคนแรกในเกมเพื่อเริ่มการ Spectate
-        local players = Players:GetPlayers()
-        for _, player in ipairs(players) do
-            if player ~= LocalPlayer then
-                currentSpectatingPlayer = player
-                Camera.CameraSubject = player.Character.Humanoid
-                Camera.CameraType = Enum.CameraType.Scriptable
-                break
-            end
-        end
-    else
-        Camera.CameraSubject = LocalPlayer.Character.Humanoid
-        Camera.CameraType = Enum.CameraType.Custom
-    end
-end)
-
--- ฟังก์ชันสำหรับสร้าง ESP
 local function createESP(player)
     if player == LocalPlayer then return end
 
-    local tag = Instance.new("BillboardGui")
-    tag.Name = "ESP_Tag"
-    tag.Adornee = player.Character:WaitForChild("Head")
-    tag.Size = UDim2.new(0, 120, 0, 25)
-    tag.StudsOffset = Vector3.new(0, 2.7, 0)
-    tag.AlwaysOnTop = true
-    tag.Parent = player.Character
+    local function onCharacterAdded(character)
+        local head = character:WaitForChild("Head", 10)
+        if not head then return end
 
-    local label = Instance.new("TextLabel", tag)
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextStrokeTransparency = 0.4
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamSemibold
-    label.Text = player.Name
+        local oldTag = character:FindFirstChild("ESP_Tag")
+        if oldTag then oldTag:Destroy() end
 
-    RunService.RenderStepped:Connect(function()
-        if espEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local dist = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            label.Text = player.Name .. " [" .. math.floor(dist) .. "m]"
-            tag.Enabled = true
-        else
-            tag.Enabled = false
-        end
-    end)
-end
+        local tag = Instance.new("BillboardGui")
+        tag.Name = "ESP_Tag"
+        tag.Adornee = head
+        tag.Size = UDim2.new(0, 120, 0, 25)
+        tag.StudsOffset = Vector3.new(0, 2.7, 0)
+        tag.AlwaysOnTop = true
+        tag.Parent = character
 
--- สร้าง ESP สำหรับผู้เล่นที่มีอยู่แล้ว
-for _, player in ipairs(Players:GetPlayers()) do
-    createESP(player)
-end
+        local label = Instance.new("TextLabel", tag)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = ESPColor
+        label.TextStrokeTransparency = 0.4
+        label.TextScaled = true
+        label.Font = Enum.Font.GothamSemibold
+        label.Text = player.Name
 
--- สร้าง ESP เมื่อมีผู้เล่นใหม่เข้ามา
-Players.PlayerAdded:Connect(createESP)
-
--- ลบ ESP เมื่อผู้เล่นออกจากเกม
-Players.PlayerRemoving:Connect(function(player)
-    local tag = player.Character and player.Character:FindFirstChild("ESP_Tag")
-    if tag then
-        tag:Destroy()
+        RunService.RenderStepped:Connect(function()
+            if getgenv().ESPEnabled
+               and character.Parent
+               and character:FindFirstChild("HumanoidRootPart")
+               and LocalPlayer.Character
+               and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            then
+                local dist = (character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                label.Text = player.Name .. " [" .. math.floor(dist) .. "m]"
+                tag.Enabled = true
+            else
+                tag.Enabled = false
+            end
+        end)
     end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
+end
+
+for _, p in pairs(Players:GetPlayers()) do
+    createESP(p)
+end
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(function(p)
+    local tag = p.Character and p.Character:FindFirstChild("ESP_Tag")
+    if tag then tag:Destroy() end
 end)
 
--- ฟังก์ชันสำหรับการ Spectate
-RunService.RenderStepped:Connect(function()
-    if spectateEnabled and currentSpectatingPlayer and currentSpectatingPlayer.Character then
-        Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(currentSpectatingPlayer.Character.HumanoidRootPart.Position + Vector3.new(0, 5, 0), currentSpectatingPlayer.Character.HumanoidRootPart.Position), 0.1)
-    end
+-- ====== TOGGLE UI VISIBILITY (พับ/แสดงเมนู) ======
+local mainToggleGui = Instance.new("ScreenGui", PlayerGui)
+mainToggleGui.Name = "MainToggle_UI"
+mainToggleGui.ResetOnSpawn = false
+mainToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local isMinimized = false
+local toggleMainButton = Instance.new("TextButton")
+toggleMainButton.Size = UDim2.new(0, 150, 0, 40)
+toggleMainButton.Position = UDim2.new(0, 180, 0, 20)
+toggleMainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+toggleMainButton.TextColor3 = Color3.fromRGB(1,1,1)
+toggleMainButton.Font = Enum.Font.GothamBold
+toggleMainButton.TextScaled = true
+toggleMainButton.Text = "🔽 พับเมนู"
+toggleMainButton.Parent = mainToggleGui
+toggleMainButton.Active = true
+toggleMainButton.Draggable = true
+
+toggleMainButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    toggleMainButton.Text = isMinimized and "🔼 แสดงเมนู" or "🔽 พับเมนู"
+
+    -- ซ่อน/แสดง ESP UI
+    espGui.Enabled = not isMinimized
 end)
 
