@@ -118,4 +118,54 @@ toggleMainButton.MouseButton1Click:Connect(function()
     -- ซ่อน/แสดง ESP UI
     espGui.Enabled = not isMinimized
 end)
+-- ====== AIMBOT ======
+getgenv().AimbotEnabled = false
+local AimbotSmoothness = 0.15 -- ยิ่งน้อยยิ่งดูดแรง
+local Camera = workspace.CurrentCamera
 
+-- ปุ่มเปิด/ปิด Aimbot
+local toggleAimbotButton = createButton(espGui, "ToggleAimbotButton", "🎯 เปิด Aimbot", 70)
+toggleAimbotButton.MouseButton1Click:Connect(function()
+	getgenv().AimbotEnabled = not getgenv().AimbotEnabled
+	toggleAimbotButton.Text = getgenv().AimbotEnabled and "❌ ปิด Aimbot" or "🎯 เปิด Aimbot"
+end)
+
+-- หาเป้าหมายใกล้สุด
+local function getClosestTarget()
+	local closestPlayer = nil
+	local shortestDistance = math.huge
+
+	for _, player in pairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer
+		   and player.Character
+		   and player.Character:FindFirstChild("Head")
+		   and player.Character:FindFirstChild("Humanoid")
+		   and player.Character.Humanoid.Health > 0
+		then
+			local head = player.Character.Head
+			local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+			if onScreen then
+				local mousePos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+				local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+				if dist < shortestDistance then
+					shortestDistance = dist
+					closestPlayer = head
+				end
+			end
+		end
+	end
+
+	return closestPlayer
+end
+
+-- เล็ง
+RunService.RenderStepped:Connect(function()
+	if not getgenv().AimbotEnabled then return end
+
+	local target = getClosestTarget()
+	if target then
+		local camCFrame = Camera.CFrame
+		local targetCFrame = CFrame.new(camCFrame.Position, target.Position)
+		Camera.CFrame = camCFrame:Lerp(targetCFrame, AimbotSmoothness)
+	end
+en
