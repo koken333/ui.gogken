@@ -1,171 +1,89 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "GohkenUI"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- ฟังก์ชันสร้าง UI สวยๆ
-local function createButton(parent, name, text, posY)
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Size = UDim2.new(0, 150, 0, 40)
-    btn.Position = UDim2.new(0, 20, 0, posY)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    btn.BorderSizePixel = 0
-    btn.TextColor3 = Color3.fromRGB(1,1,1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextScaled = true
-    btn.Text = text
-    btn.Parent = parent
-    return btn
+-- เฟรมหลัก (Main Frame)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 260, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18) -- ดำเข้มเกือบสนิท
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 4)
+Corner.Parent = MainFrame
+
+-- ชื่อเมนู (GOHKEN)
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 40)
+Title.Position = UDim2.new(0, 15, 0, 5)
+Title.BackgroundTransparency = 1
+Title.Text = "GOHKEN"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 20
+Title.Parent = MainFrame
+
+-- ปุ่มเมนูหลัก (Main Tab)
+local MainButton = Instance.new("TextButton")
+MainButton.Size = UDim2.new(1, -30, 0, 38)
+MainButton.Position = UDim2.new(0, 15, 0, 50)
+MainButton.BackgroundColor3 = Color3.fromRGB(235, 65, 30) -- สีส้มแดงสด
+MainButton.Text = "Main"
+MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainButton.Font = Enum.Font.GothamMedium
+MainButton.TextSize = 15
+MainButton.AutoButtonColor = true
+MainButton.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = MainButton
+
+--- ส่วนของหัวข้อ Settings ---
+local function CreateSectionLabel(text, posY)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -30, 0, 30)
+    Label.Position = UDim2.new(0, 15, 0, posY)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 14
+    Label.Parent = MainFrame
+    return Label
 end
 
--- ====== ESP ======
-getgenv().ESPEnabled = false
-local ESPColor = Color3.fromRGB(0, 255, 0)
+CreateSectionLabel("Aimbot Settings", 100)
 
-local espGui = Instance.new("ScreenGui", PlayerGui)
-espGui.Name = "ESP_UI"
-espGui.ResetOnSpawn = false
-espGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- ตัวอย่างปุ่มเปิด/ปิด (Toggle Style)
+local EnableToggle = Instance.new("TextButton")
+EnableToggle.Size = UDim2.new(1, -30, 0, 30)
+EnableToggle.Position = UDim2.new(0, 15, 0, 135)
+EnableToggle.BackgroundTransparency = 1
+EnableToggle.Text = "     Enable"
+EnableToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
+EnableToggle.TextXAlignment = Enum.TextXAlignment.Left
+EnableToggle.Font = Enum.Font.Gotham
+EnableToggle.TextSize = 14
+EnableToggle.Parent = MainFrame
 
-local toggleESPButton = createButton(espGui, "ToggleESPButton", "🔍 เปิด ESP", 20)
-toggleESPButton.MouseButton1Click:Connect(function()
-    getgenv().ESPEnabled = not getgenv().ESPEnabled
-    toggleESPButton.Text = getgenv().ESPEnabled and "❌ ปิด ESP" or "🔍 เปิด ESP"
-end)
+-- วงกลม Toggle ข้างหน้า
+local Circle = Instance.new("Frame")
+Circle.Size = UDim2.new(0, 18, 0, 18)
+Circle.Position = UDim2.new(0, 0, 0.5, -9)
+Circle.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+Circle.Parent = EnableToggle
 
-local function createESP(player)
-    if player == LocalPlayer then return end
+local CircleStroke = Instance.new("UIStroke")
+CircleStroke.Thickness = 2
+CircleStroke.Color = Color3.fromRGB(235, 65, 30)
+CircleStroke.Parent = Circle
 
-    local function onCharacterAdded(character)
-        local head = character:WaitForChild("Head", 10)
-        if not head then return end
-
-        local oldTag = character:FindFirstChild("ESP_Tag")
-        if oldTag then oldTag:Destroy() end
-
-        local tag = Instance.new("BillboardGui")
-        tag.Name = "ESP_Tag"
-        tag.Adornee = head
-        tag.Size = UDim2.new(0, 120, 0, 25)
-        tag.StudsOffset = Vector3.new(0, 2.7, 0)
-        tag.AlwaysOnTop = true
-        tag.Parent = character
-
-        local label = Instance.new("TextLabel", tag)
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.TextColor3 = ESPColor
-        label.TextStrokeTransparency = 0.4
-        label.TextScaled = true
-        label.Font = Enum.Font.GothamSemibold
-        label.Text = player.Name
-
-        RunService.RenderStepped:Connect(function()
-            if getgenv().ESPEnabled
-               and character.Parent
-               and character:FindFirstChild("HumanoidRootPart")
-               and LocalPlayer.Character
-               and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            then
-                local dist = (character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                label.Text = player.Name .. " [" .. math.floor(dist) .. "m]"
-                tag.Enabled = true
-            else
-                tag.Enabled = false
-            end
-        end)
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
-end
-
-for _, p in pairs(Players:GetPlayers()) do
-    createESP(p)
-end
-Players.PlayerAdded:Connect(createESP)
-Players.PlayerRemoving:Connect(function(p)
-    local tag = p.Character and p.Character:FindFirstChild("ESP_Tag")
-    if tag then tag:Destroy() end
-end)
-
--- ====== TOGGLE UI VISIBILITY (พับ/แสดงเมนู) ======
-local mainToggleGui = Instance.new("ScreenGui", PlayerGui)
-mainToggleGui.Name = "MainToggle_UI"
-mainToggleGui.ResetOnSpawn = false
-mainToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-local isMinimized = false
-local toggleMainButton = Instance.new("TextButton")
-toggleMainButton.Size = UDim2.new(0, 150, 0, 40)
-toggleMainButton.Position = UDim2.new(0, 180, 0, 20)
-toggleMainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-toggleMainButton.TextColor3 = Color3.fromRGB(1,1,1)
-toggleMainButton.Font = Enum.Font.GothamBold
-toggleMainButton.TextScaled = true
-toggleMainButton.Text = "🔽 พับเมนู"
-toggleMainButton.Parent = mainToggleGui
-toggleMainButton.Active = true
-toggleMainButton.Draggable = true
-
-toggleMainButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    toggleMainButton.Text = isMinimized and "🔼 แสดงเมนู" or "🔽 พับเมนู"
-
-    -- ซ่อน/แสดง ESP UI
-    espGui.Enabled = not isMinimized
-end)
--- ====== AIMBOT ======
-getgenv().AimbotEnabled = false
-local AimbotSmoothness = 0.15 -- ยิ่งน้อยยิ่งดูดแรง
-local Camera = workspace.CurrentCamera
-
--- ปุ่มเปิด/ปิด Aimbot
-local toggleAimbotButton = createButton(espGui, "ToggleAimbotButton", "🎯 เปิด Aimbot", 70)
-toggleAimbotButton.MouseButton1Click:Connect(function()
-	getgenv().AimbotEnabled = not getgenv().AimbotEnabled
-	toggleAimbotButton.Text = getgenv().AimbotEnabled and "❌ ปิด Aimbot" or "🎯 เปิด Aimbot"
-end)
-
--- หาเป้าหมายใกล้สุด
-local function getClosestTarget()
-	local closestPlayer = nil
-	local shortestDistance = math.huge
-
-	for _, player in pairs(Players:GetPlayers()) do
-		if player ~= LocalPlayer
-		   and player.Character
-		   and player.Character:FindFirstChild("Head")
-		   and player.Character:FindFirstChild("Humanoid")
-		   and player.Character.Humanoid.Health > 0
-		then
-			local head = player.Character.Head
-			local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-			if onScreen then
-				local mousePos = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-				local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-				if dist < shortestDistance then
-					shortestDistance = dist
-					closestPlayer = head
-				end
-			end
-		end
-	end
-
-	return closestPlayer
-end
-
--- เล็ง
-RunService.RenderStepped:Connect(function()
-	if not getgenv().AimbotEnabled then return end
-
-	local target = getClosestTarget()
-	if target then
-		local camCFrame = Camera.CFrame
-		local targetCFrame = CFrame.new(camCFrame.Position, target.Position)
-		Camera.CFrame = camCFrame:Lerp(targetCFrame, AimbotSmoothness)
-	end
-en
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0)
+CircleCorner.Parent = Circle
