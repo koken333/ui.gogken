@@ -1,89 +1,148 @@
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GohkenUI"
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("My Study Hub", "BloodTheme")
 
--- เฟรมหลัก (Main Frame)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 260, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -130, 0.5, -190)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18) -- ดำเข้มเกือบสนิท
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
+-- SERVICE & VARIABLES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local camera = workspace.CurrentCamera
+local localPlayer = Players.LocalPlayer
 
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 4)
-Corner.Parent = MainFrame
+-- Global Table สำหรับเก็บค่าคอนฟิก
+_G.MyAimbotSettings = {
+    AimbotEnabled = false,
+    TargetPart = "Head",
+    Smoothness = 0.15,
+    FOV = 120,
+    ESPEnabled = true,
+}
 
--- ชื่อเมนู (GOHKEN)
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -20, 0, 40)
-Title.Position = UDim2.new(0, 15, 0, 5)
-Title.BackgroundTransparency = 1
-Title.Text = "GOHKEN"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.Parent = MainFrame
+local CurrentSettings = _G.MyAimbotSettings
 
--- ปุ่มเมนูหลัก (Main Tab)
-local MainButton = Instance.new("TextButton")
-MainButton.Size = UDim2.new(1, -30, 0, 38)
-MainButton.Position = UDim2.new(0, 15, 0, 50)
-MainButton.BackgroundColor3 = Color3.fromRGB(235, 65, 30) -- สีส้มแดงสด
-MainButton.Text = "Main"
-MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MainButton.Font = Enum.Font.GothamMedium
-MainButton.TextSize = 15
-MainButton.AutoButtonColor = true
-MainButton.Parent = MainFrame
+-- DRAWING FOV (วงกลม)
+local fovCircle = Drawing.new("Circle")
+fovCircle.Visible = true
+fovCircle.Thickness = 1
+fovCircle.Radius = CurrentSettings.FOV
+fovCircle.Color = Color3.fromRGB(255, 0, 0)
 
-local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 6)
-BtnCorner.Parent = MainButton
+-- ESP STORAGE
+local playerESPDrawings = {}
 
---- ส่วนของหัวข้อ Settings ---
-local function CreateSectionLabel(text, posY)
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, -30, 0, 30)
-    Label.Position = UDim2.new(0, 15, 0, posY)
-    Label.BackgroundTransparency = 1
-    Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Font = Enum.Font.GothamMedium
-    Label.TextSize = 14
-    Label.Parent = MainFrame
-    return Label
+-- ฟังก์ชันจัดการ ESP (เหมือนเดิม)
+local function updatePlayerESP(player)
+    if player == localPlayer then return end
+    local espDrawing = playerESPDrawings[player.UserId]
+    if not espDrawing then
+        espDrawing = Drawing.new("Text")
+        espDrawing.Size = 16
+        espDrawing.Center = true
+        espDrawing.Outline = true
+        espDrawing.Visible = false
+        playerESPDrawings[player.UserId] = espDrawing
+    end
+
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+
+    if CurrentSettings.ESPEnabled and hrp and hum and hum.Health > 0 then
+        local pos, onscreen = camera:WorldToViewportPoint(hrp.Position)
+        if onscreen then
+            espDrawing.Position = Vector2.new(pos.X, pos.Y - 30)
+            espDrawing.Text = player.Name
+            espDrawing.Visible = true
+            espDrawing.Color = CurrentSettings.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        else
+            espDrawing.Visible = false
+        end
+    else
+        espDrawing.Visible = false
+    end
 end
 
-CreateSectionLabel("Aimbot Settings", 100)
+-- ฟังก์ชันหาเป้าหมาย
+local function getClosestTarget()
+    local closestPart = nil
+    local shortestDistance = CurrentSettings.FOV
+    local mouseLoc = UserInputService:GetMouseLocation()
 
--- ตัวอย่างปุ่มเปิด/ปิด (Toggle Style)
-local EnableToggle = Instance.new("TextButton")
-EnableToggle.Size = UDim2.new(1, -30, 0, 30)
-EnableToggle.Position = UDim2.new(0, 15, 0, 135)
-EnableToggle.BackgroundTransparency = 1
-EnableToggle.Text = "     Enable"
-EnableToggle.TextColor3 = Color3.fromRGB(200, 200, 200)
-EnableToggle.TextXAlignment = Enum.TextXAlignment.Left
-EnableToggle.Font = Enum.Font.Gotham
-EnableToggle.TextSize = 14
-EnableToggle.Parent = MainFrame
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= localPlayer and p.Character then
+            local part = p.Character:FindFirstChild(CurrentSettings.TargetPart)
+            local hum = p.Character:FindFirstChild("Humanoid")
 
--- วงกลม Toggle ข้างหน้า
-local Circle = Instance.new("Frame")
-Circle.Size = UDim2.new(0, 18, 0, 18)
-Circle.Position = UDim2.new(0, 0, 0.5, -9)
-Circle.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-Circle.Parent = EnableToggle
+            if part and hum and hum.Health > 0 then
+                local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - mouseLoc).Magnitude
+                    if dist < shortestDistance then
+                        shortestDistance = dist
+                        closestPart = part
+                    end
+                end
+            end
+        end
+    end
+    return closestPart
+end
 
-local CircleStroke = Instance.new("UIStroke")
-CircleStroke.Thickness = 2
-CircleStroke.Color = Color3.fromRGB(235, 65, 30)
-CircleStroke.Parent = Circle
+-- ====== UI SETUP ======
+local MainTab = Window:NewTab("Main")
+local AimbotSection = MainTab:NewSection("Aimbot (E = Toggle | F = Switch)")
+local ESPSection = MainTab:NewSection("ESP Settings")
 
-local CircleCorner = Instance.new("UICorner")
-CircleCorner.CornerRadius = UDim.new(1, 0)
-CircleCorner.Parent = Circle
+-- ปุ่ม Toggle ใน UI
+local aimbotToggleUI = AimbotSection:NewToggle("Enable Aimbot", "Locks onto targets", function(state)
+    CurrentSettings.AimbotEnabled = state
+end)
+
+-- Dropdown ใน UI
+local targetDropdownUI = AimbotSection:NewDropdown("Target Part", "Select where to lock", {"Head", "HumanoidRootPart"}, function(currentOption)
+    CurrentSettings.TargetPart = currentOption
+end)
+
+AimbotSection:NewSlider("Smoothness", "Speed", 100, 1, function(s) CurrentSettings.Smoothness = s / 100 end)
+AimbotSection:NewSlider("FOV Radius", "Circle size", 500, 50, function(s) CurrentSettings.FOV = s end)
+ESPSection:NewToggle("Enable ESP", "Show Names", function(state) CurrentSettings.ESPEnabled = state end)
+
+-- ====== KEYBIND LOGIC (E และ F) ======
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end -- ไม่ทำงานถ้ากำลังพิมพ์แชท
+
+    -- กด E เพื่อเปิด/ปิด Aimbot
+    if input.KeyCode == Enum.KeyCode.E then
+        CurrentSettings.AimbotEnabled = not CurrentSettings.AimbotEnabled
+        -- อัปเดตสถานะใน UI ให้ตรงกับที่เรากดปุ่ม (Optional)
+        Library:Notify("Aimbot: " .. (CurrentSettings.AimbotEnabled and "ON" or "OFF"))
+    end
+
+    -- กด F เพื่อสลับหัว/ตัว
+    if input.KeyCode == Enum.KeyCode.F then
+        if CurrentSettings.TargetPart == "Head" then
+            CurrentSettings.TargetPart = "HumanoidRootPart"
+        else
+            CurrentSettings.TargetPart = "Head"
+        end
+        Library:Notify("Targeting: " .. CurrentSettings.TargetPart)
+    end
+end)
+
+-- ====== MAIN LOOP ======
+RunService.RenderStepped:Connect(function()
+    fovCircle.Position = UserInputService:GetMouseLocation()
+    fovCircle.Radius = CurrentSettings.FOV
+    fovCircle.Visible = CurrentSettings.AimbotEnabled
+    fovCircle.Color = CurrentSettings.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+    if CurrentSettings.AimbotEnabled then
+        local target = getClosestTarget()
+        if target then
+            camera.CFrame = camera.CFrame:Lerp(CFrame.lookAt(camera.CFrame.Position, target.Position), CurrentSettings.Smoothness)
+        end
+    end
+
+    for _, player in pairs(Players:GetPlayers()) do
+        updatePlayerESP(player)
+    end
+end)
