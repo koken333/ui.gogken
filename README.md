@@ -1,14 +1,19 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("My Study Hub", "BloodTheme")
+local success, Library = pcall(function() 
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))() 
+end)
 
--- SERVICE & VARIABLES
+if not success or not Library then return end
+
+local Window = Library.CreateLib("Owner Study Hub (Custom)", "BloodTheme")
+
+-- SERVICE
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local camera = workspace.CurrentCamera
 local localPlayer = Players.LocalPlayer
 
--- Global Table สำหรับเก็บค่าคอนฟิก
+-- SETTINGS
 _G.MyAimbotSettings = {
     AimbotEnabled = false,
     TargetPart = "Head",
@@ -16,32 +21,44 @@ _G.MyAimbotSettings = {
     FOV = 120,
     ESPEnabled = true,
 }
-
 local CurrentSettings = _G.MyAimbotSettings
 
--- DRAWING FOV (วงกลม)
+-- DRAWING FOV (วงกลมจะโชว์ตลอดเวลา)
 local fovCircle = Drawing.new("Circle")
 fovCircle.Visible = true
 fovCircle.Thickness = 1
 fovCircle.Radius = CurrentSettings.FOV
 fovCircle.Color = Color3.fromRGB(255, 0, 0)
+fovCircle.Filled = false
 
--- ESP STORAGE
+-- ESP STORAGE & CLEANUP
 local playerESPDrawings = {}
 
--- ฟังก์ชันจัดการ ESP (เหมือนเดิม)
+local function removeESP(userId)
+    if playerESPDrawings[userId] then
+        playerESPDrawings[userId]:Remove()
+        playerESPDrawings[userId] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(function(player)
+    removeESP(player.UserId)
+end)
+
+-- ฟังก์ชันจัดการ ESP
 local function updatePlayerESP(player)
     if player == localPlayer then return end
-    local espDrawing = playerESPDrawings[player.UserId]
-    if not espDrawing then
-        espDrawing = Drawing.new("Text")
-        espDrawing.Size = 16
-        espDrawing.Center = true
-        espDrawing.Outline = true
-        espDrawing.Visible = false
-        playerESPDrawings[player.UserId] = espDrawing
+    
+    if not playerESPDrawings[player.UserId] then
+        local text = Drawing.new("Text")
+        text.Size = 16
+        text.Center = true
+        text.Outline = true
+        text.Visible = false
+        playerESPDrawings[player.UserId] = text
     end
 
+    local espDrawing = playerESPDrawings[player.UserId]
     local char = player.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChild("Humanoid")
@@ -50,9 +67,9 @@ local function updatePlayerESP(player)
         local pos, onscreen = camera:WorldToViewportPoint(hrp.Position)
         if onscreen then
             espDrawing.Position = Vector2.new(pos.X, pos.Y - 30)
-            espDrawing.Text = player.Name
+            espDrawing.Text = string.format("[%s] %d HP", player.Name, math.floor(hum.Health))
             espDrawing.Visible = true
-            espDrawing.Color = CurrentSettings.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+            espDrawing.Color = Color3.fromRGB(255, 255, 255)
         else
             espDrawing.Visible = false
         end
@@ -87,54 +104,57 @@ local function getClosestTarget()
     return closestPart
 end
 
--- ====== UI SETUP ======
-local MainTab = Window:NewTab("Main")
-local AimbotSection = MainTab:NewSection("Aimbot (E = Toggle | F = Switch)")
-local ESPSection = MainTab:NewSection("ESP Settings")
+-- UI SETUP
+local MainTab = Window:NewTab("Main Hub")
+local Combat = MainTab:NewSection("Combat Controls")
+local Visuals = MainTab:NewSection("Visual Settings")
 
--- ปุ่ม Toggle ใน UI
-local aimbotToggleUI = AimbotSection:NewToggle("Enable Aimbot", "Locks onto targets", function(state)
+Combat:NewToggle("Enable Aimbot (Key: E)", "Toggle lock on", function(state)
     CurrentSettings.AimbotEnabled = state
 end)
 
--- Dropdown ใน UI
-local targetDropdownUI = AimbotSection:NewDropdown("Target Part", "Select where to lock", {"Head", "HumanoidRootPart"}, function(currentOption)
-    CurrentSettings.TargetPart = currentOption
+Combat:NewSlider("Smoothness", "Control speed", 100, 1, function(s) 
+    CurrentSettings.Smoothness = s / 100 
 end)
 
-AimbotSection:NewSlider("Smoothness", "Speed", 100, 1, function(s) CurrentSettings.Smoothness = s / 100 end)
-AimbotSection:NewSlider("FOV Radius", "Circle size", 500, 50, function(s) CurrentSettings.FOV = s end)
-ESPSection:NewToggle("Enable ESP", "Show Names", function(state) CurrentSettings.ESPEnabled = state end)
+Combat:NewSlider("FOV Radius", "Size of circle", 800, 10, function(s) 
+    CurrentSettings.FOV = s 
+end)
 
--- ====== KEYBIND LOGIC (E และ F) ======
+Combat:NewDropdown("Target Part (Key: F)", "Select part", {"Head", "HumanoidRootPart"}, function(op)
+    CurrentSettings.TargetPart = op
+end)
+
+Visuals:NewToggle("Enable Names", "Show Player Tags", function(state) 
+    CurrentSettings.ESPEnabled = state 
+end)
+
+-- KEYBIND LOGIC (ตัดการแจ้งเตือนออก)
 UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end -- ไม่ทำงานถ้ากำลังพิมพ์แชท
-
-    -- กด E เพื่อเปิด/ปิด Aimbot
-    if input.KeyCode == Enum.KeyCode.E then
+    if gpe then return end
+    
+    -- กด E เพื่อเปิด/ปิดเฉพาะการล็อคเป้า
+    if input.KeyCode == Enum.KeyCode.Q then
         CurrentSettings.AimbotEnabled = not CurrentSettings.AimbotEnabled
-        -- อัปเดตสถานะใน UI ให้ตรงกับที่เรากดปุ่ม (Optional)
-        Library:Notify("Aimbot: " .. (CurrentSettings.AimbotEnabled and "ON" or "OFF"))
     end
-
-    -- กด F เพื่อสลับหัว/ตัว
+    
+    -- กด F เพื่อสลับจุดเล็ง
     if input.KeyCode == Enum.KeyCode.F then
-        if CurrentSettings.TargetPart == "Head" then
-            CurrentSettings.TargetPart = "HumanoidRootPart"
-        else
-            CurrentSettings.TargetPart = "Head"
-        end
-        Library:Notify("Targeting: " .. CurrentSettings.TargetPart)
+        CurrentSettings.TargetPart = (CurrentSettings.TargetPart == "Head" and "HumanoidRootPart" or "Head")
     end
 end)
 
--- ====== MAIN LOOP ======
+-- MAIN LOOP
 RunService.RenderStepped:Connect(function()
+    -- วงกลม FOV จะแสดงตลอดเวลาและขยับตามเมาส์
     fovCircle.Position = UserInputService:GetMouseLocation()
     fovCircle.Radius = CurrentSettings.FOV
-    fovCircle.Visible = CurrentSettings.AimbotEnabled
+    fovCircle.Visible = true -- ให้เห็นวงกลมตลอดเพื่อวัดระยะ
+    
+    -- เปลี่ยนสีวงกลมให้รู้สถานะ (เขียวเมื่อเปิดใช้ / แดงเมื่อปิด)
     fovCircle.Color = CurrentSettings.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
 
+    -- ระบบล็อคเป้า
     if CurrentSettings.AimbotEnabled then
         local target = getClosestTarget()
         if target then
@@ -142,6 +162,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- ระบบ ESP
     for _, player in pairs(Players:GetPlayers()) do
         updatePlayerESP(player)
     end
